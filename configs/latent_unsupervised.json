@@ -1,0 +1,13 @@
+{
+  "run_dir": "experiments/latent_linear",
+  "output_dir": "experiments/latent_linear/unsupervised_factors",
+  "seed": 42,
+  "n_factors": 1,
+  "condition_codes": ["C", "E", "B", "D"],
+  "pca": {"svd_solver": "full"},
+  "factor_analysis": {"svd_method": "lapack", "max_iter": 5000, "tol": 0.0001},
+  "standardization": "training-only StandardScaler on nonconstant columns",
+  "constant_rule": "existing varying_columns; train std <= 1e-10 * max(1, max(abs(train)))",
+  "x_reconstruction": "fixed unregularized least squares with intercept, factor -> raw X; training rows only",
+  "selection_policy": "no latent labels, no hyperparameter search, no component/condition selection"
+}

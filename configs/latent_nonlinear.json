@@ -1,0 +1,6 @@
+{
+  "extends": "latent_linear.json",
+  "name": "latent_nonlinear",
+  "output_dir": "experiments/latent_nonlinear",
+  "data": {"latent_function": "tanh", "noise_std": 0.5}
+}

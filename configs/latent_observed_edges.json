@@ -1,0 +1,6 @@
+{
+  "extends": "latent_linear.json",
+  "name": "latent_observed_edges",
+  "output_dir": "experiments/latent_observed_edges",
+  "data": {"observed_coefficients": [[0, 0.5, 0], [0, 0, 0.5], [0, 0, 0]]}
+}

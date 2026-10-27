@@ -89,6 +89,24 @@ def main(opt, metrics_callback=None, plotting_callback=None):
                                 normalize=opt.normalize_data, mean=train_data.mean, std=train_data.std,
                                 random_seed=opt.random_seed)
 
+    def export_stage_hidden(stage_model, stage, checkpoint_name='model.pkl'):
+        if not getattr(opt, 'export_hidden', False):
+            return
+        from .hidden import export_hidden_from_managers
+        checkpoint = os.path.join(opt.exp_path, stage, checkpoint_name)
+        info = export_hidden_from_managers(
+            stage_model, train_data, test_data,
+            os.path.join(opt.exp_path, stage, 'hidden'),
+            split=opt.hidden_split, batch_size=opt.hidden_batch_size,
+            metadata={'stage': stage, 'checkpoint': checkpoint,
+                      'checkpoint_exists': os.path.isfile(checkpoint),
+                      'source_data': train_data.data_path,
+                      'random_seed': opt.random_seed,
+                      'note': 'Current adjacency mask; CAM pruning does not retrain NN weights.'},
+            overwrite=opt.hidden_overwrite)
+        print('Hidden layers exported for {}: {}'.format(
+            stage, [layer['shape'] for layer in info['layers']]))
+
     # save gt adjacency
     dump(train_data.adjacency.detach().cpu().numpy(), opt.exp_path, 'gt-adjacency')
 
@@ -109,8 +127,11 @@ def main(opt, metrics_callback=None, plotting_callback=None):
             model = load(os.path.join(opt.exp_path, "pns"), "model.pkl")
         else:
             print("Training from scratch")
-        train(model, train_data.adjacency.detach().cpu().numpy(), train_data, test_data, opt, metrics_callback,
-              plotting_callback)
+        trained = train(model, train_data.adjacency.detach().cpu().numpy(), train_data, test_data, opt, metrics_callback,
+                        plotting_callback)
+        # If training hit its iteration limit without saving a checkpoint,
+        # extraction still works on the in-memory model at that point.
+        export_stage_hidden(trained if trained is not None else model, 'train')
 
     # remove edges until we have a DAG
     if opt.to_dag:
@@ -120,7 +141,8 @@ def main(opt, metrics_callback=None, plotting_callback=None):
         model = load(os.path.join(opt.exp_path, "train"), "model.pkl")
 
         # run
-        to_dag(model, train_data, test_data, opt, metrics_callback, plotting_callback)
+        dag_model = to_dag(model, train_data, test_data, opt, metrics_callback, plotting_callback)
+        export_stage_hidden(dag_model, 'to-dag')
 
     # do further pruning of the DAG
     if opt.cam_pruning:
@@ -139,6 +161,7 @@ def main(opt, metrics_callback=None, plotting_callback=None):
             # run
             model = cam_pruning(model, train_data, test_data, opt, cutoff=cutoff,
                                 metrics_callback=metrics_callback, plotting_callback=plotting_callback)
+            export_stage_hidden(model, 'cam-pruning/cutoff_%.6f' % cutoff)
             current_adj = model.adjacency.detach().cpu().numpy()
 
             # retrain model from scratch using the learned graph (and make sure not learning on the same graph twice)
@@ -148,6 +171,11 @@ def main(opt, metrics_callback=None, plotting_callback=None):
                 print("Retraining NNs with estimated dag from {}".format(path_cam))
                 model.reset_params()
                 retrain(model, train_data, test_data, path_cam, opt, metrics_callback, plotting_callback)
+                if getattr(opt, 'export_hidden', False):
+                    stage = 'retrain_' + path_cam
+                    best = os.path.join(opt.exp_path, stage, 'best-model.pkl')
+                    export_stage_hidden(load(os.path.dirname(best), 'best-model.pkl')
+                                        if os.path.isfile(best) else model, stage, 'best-model.pkl')
                 old_adj = current_adj
 
     # if no cam pruning, run it on to-dag exclusively
@@ -159,3 +187,8 @@ def main(opt, metrics_callback=None, plotting_callback=None):
         print("Retraining NNs with estimated dag from /to-dag")
         model.reset_params()
         retrain(model, train_data, test_data, "to-dag", opt, metrics_callback, plotting_callback)
+        if getattr(opt, 'export_hidden', False):
+            stage = 'retrain_to-dag'
+            best = os.path.join(opt.exp_path, stage, 'best-model.pkl')
+            export_stage_hidden(load(os.path.dirname(best), 'best-model.pkl')
+                                if os.path.isfile(best) else model, stage, 'best-model.pkl')

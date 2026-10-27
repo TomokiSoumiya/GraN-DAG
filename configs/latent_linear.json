@@ -1,0 +1,45 @@
+{
+  "name": "latent_linear",
+  "output_dir": "experiments/latent_linear",
+  "data": {
+    "n_samples": 1000,
+    "n_observed": 3,
+    "n_latent": 1,
+    "seed": 42,
+    "latent_distribution": {"type": "normal", "mean": 0.0, "std": 1.0},
+    "latent_coefficients": [[2.0, 3.0, 1.0]],
+    "observed_coefficients": [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+    "noise_std": 1.0,
+    "latent_function": "identity",
+    "observed_function": "identity"
+  },
+  "split": {"train": 0.6, "validation": 0.2, "test": 0.2, "seed": 42},
+  "training": {
+    "seed": 42,
+    "model": "NonLinGaussANM",
+    "num_layers": 2,
+    "hid_dim": 10,
+    "nonlin": "leaky-relu",
+    "normalize_data": true,
+    "optimizer": "rmsprop",
+    "lr": 0.01,
+    "lr_reinit": 0.0001,
+    "num_train_iter": 100000,
+    "train_batch_size": 64,
+    "h_threshold": 1e-8,
+    "cam_pruning_cutoff": 0.001,
+    "torch_num_threads": 1,
+    "require_convergence": true
+  },
+  "probe": {
+    "seed": 43,
+    "cv_folds": 5,
+    "ridge_alphas": [0.0001, 0.01, 1.0, 100.0],
+    "nonlinear": {
+      "type": "extra_trees",
+      "n_estimators": 100,
+      "max_depth": [null, 5, 10],
+      "min_samples_leaf": [2, 5]
+    }
+  }
+}

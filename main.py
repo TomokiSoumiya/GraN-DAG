@@ -25,7 +25,7 @@ import numpy as np
 from gran_dag.main import main
 
 
-if __name__ == "__main__":
+def build_parser():
     parser = argparse.ArgumentParser()
 
     # experiment
@@ -124,11 +124,25 @@ if __name__ == "__main__":
     parser.add_argument('--no-w-adjs-log', action="store_true",
                         help='do not log weighted adjacency (to save RAM). One plot will be missing (A_\phi plot)')
 
+    # optional post-training representation export
+    parser.add_argument('--export-hidden', action='store_true',
+                        help='Export hidden layers after each requested stage to <stage>/hidden')
+    parser.add_argument('--hidden-batch-size', type=int, default=256,
+                        help='Batch size for hidden layer export (does not affect training)')
+    parser.add_argument('--hidden-split', choices=['all', 'train', 'test'], default='all',
+                        help='Data split to export; rows are restored to original source order')
+    parser.add_argument('--hidden-overwrite', action='store_true',
+                        help='Replace existing hidden exports')
+
     # device and numerical precision
     parser.add_argument('--gpu', action="store_true",
                         help="Use GPU")
     parser.add_argument('--float', action="store_true",
                         help="Use Float precision")
 
-    main(parser.parse_args())
+    return parser
+
+
+if __name__ == "__main__":
+    main(build_parser().parse_args())
 

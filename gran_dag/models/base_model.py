@@ -69,16 +69,20 @@ class BaseModel(nn.Module):
             self.biases.append(nn.Parameter(torch.zeros(self.num_vars, out_dim)))
             self.numel_weights += self.num_vars * out_dim * in_dim
 
-    def forward_given_params(self, x, weights, biases):
+    def forward_given_params(self, x, weights, biases, return_hidden=False):
         """
 
         :param x: batch_size x num_vars
         :param weights: list of lists. ith list contains weights for ith MLP
         :param biases: list of lists. ith list contains biases for ith MLP
         :return: batch_size x num_vars * num_params, the parameters of each variable conditional
+            If return_hidden=True, return (density_parameters, hidden_layers).
+            Each hidden tensor is post-activation, with axes (sample, target
+            variable/MLP, hidden unit), ordered from the input side.
         """
         bs = x.size(0)
         num_zero_weights = 0
+        hidden_layers = [] if return_hidden else None
         for k in range(self.num_layers + 1):
             # apply affine operator
             if k == 0:
@@ -93,10 +97,23 @@ class BaseModel(nn.Module):
             # apply non-linearity
             if k != self.num_layers:
                 x = F.leaky_relu(x) if self.nonlin == "leaky-relu" else torch.sigmoid(x)
+                if return_hidden:
+                    hidden_layers.append(x)
 
         self.zero_weights_ratio = num_zero_weights / float(self.numel_weights)
 
-        return torch.unbind(x, 1)
+        outputs = torch.unbind(x, 1)
+        return (outputs, hidden_layers) if return_hidden else outputs
+
+    def get_hidden_activations(self, x):
+        """Return all post-activation hidden layers for preprocessed inputs.
+
+        The same adjacency mask and forward operations as likelihood evaluation
+        are used. This method supports autograd; file export disables it.
+        """
+        weights, biases = self.get_parameters(mode="wb")
+        _, hidden = self.forward_given_params(x, weights, biases, return_hidden=True)
+        return hidden
 
     def get_w_adj(self):
         """Get weighted adjacency matrix"""

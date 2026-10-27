@@ -1,1 +1,7 @@
 __pycache__
+
+# Local GraN-DAG runtime assets and outputs
+container.simg
+.tools/
+data/unpacked/
+experiments/

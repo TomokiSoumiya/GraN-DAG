@@ -1,0 +1,10 @@
+{
+  "base_config": "configs/latent_nonlinear.json",
+  "pilot_dir": "experiments/latent_nonlinear",
+  "output_dir": "experiments/latent_nonlinear_multiseed",
+  "seeds": [101, 102, 103, 104, 105],
+  "workers": 3,
+  "seed_policy": "data, split, and GraN-DAG seeds = seed; probe CV/tree seed = seed + 1",
+  "summary_policy": "fresh five seeds only; pilot seed 42 excluded; sample standard deviation ddof=1",
+  "probe_policy": "reuse original hyperparameter grid; select by CV on training rows only"
+}

@@ -1,0 +1,16 @@
+{
+  "extends": "latent_linear.json",
+  "name": "latent_ten_observed",
+  "output_dir": "experiments/latent_ten_observed",
+  "data": {
+    "n_observed": 10,
+    "latent_coefficients": [[2, 1.5, 1, 0, 0, 0, 0, 0, 1, 0]],
+    "observed_coefficients": null,
+    "observed_graph": {
+      "type": "erdos_renyi",
+      "edge_probability": 0.2,
+      "weight_range": [0.3, 0.8],
+      "seed": 45
+    }
+  }
+}

@@ -69,6 +69,13 @@ class DataManagerFile(object):
         else:
             self.dataset = torch.as_tensor(data[: train_samples]).type(torch.Tensor)
 
+        # Keep original row IDs for downstream representations, without changing
+        # the existing shuffle, partition, or numerical preprocessing.
+        if train:
+            self.sample_indices = shuffle_idx[:train_samples].copy()
+        else:
+            self.sample_indices = shuffle_idx[train_samples:train_samples + test_samples].copy()
+
         # Normalize data
         self.mean, self.std = mean, std
         if normalize:

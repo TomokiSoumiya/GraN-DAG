@@ -1,0 +1,14 @@
+{
+  "base_config": "configs/latent_linear.json",
+  "factor_config": "configs/latent_unsupervised.json",
+  "output_dir": "experiments/latent_noise_study",
+  "sigmas": [0.5, 1.0, 2.0, 4.0],
+  "seeds": [42, 201, 202, 203, 204],
+  "workers": 8,
+  "reuse": {"sigma": 1.0, "seed": 42, "source": "experiments/latent_linear"},
+  "representative_seed": 201,
+  "seed_policy": "same seed for data, split, NN, and extraction; matched across sigma",
+  "evaluation_policy": "NO Z evaluation before ALL 20 runs finish label-free extraction",
+  "summary_policy": "all five prescribed seeds; sample SD ddof=1; paired differences within seed",
+  "failure_policy": "record failures; no seed replacement or favorable subset aggregation"
+}
