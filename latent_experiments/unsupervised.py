@@ -481,6 +481,28 @@ def make_figures(output, metadata, factors, metrics, z, labels):
             fig.tight_layout()
             fig.savefig(str(figures/(filename+'.png')), dpi=150)
             plt.close(fig)
+        # Explicit paired controls: identical masks for learning comparisons,
+        # and identical learned weights for the DAG-mask comparison.
+        paired_specs = [
+                ('matched_nn_comparison_'+latent,
+                 [('B_L1','C_L1'), ('B_L2','C_L2'), ('D_L1','E_L1'), ('D_L2','E_L2')],
+                 'Same-mask random vs learned NN'),
+                ('dag_mask_effect_'+latent, [('C_L1','E_L1'), ('C_L2','E_L2')],
+                 'Same learned weights: before vs after DAG mask')]
+        for filename, pairs, title in (paired_specs if metadata['settings'].get('paired_comparison_figures', False) else []):
+            fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+            for ax, method in zip(axes, METHODS):
+                for offset, side in zip((-.18, .18), (0, 1)):
+                    values = [lookup[(pair[side],method)]['absolute_pearson_r'] for pair in pairs]
+                    ax.bar(np.arange(len(pairs))+offset,
+                           [np.nan if v is None else float(v) for v in values], width=.36,
+                           label=('random','learned')[side] if 'matched' in filename else ('before','after')[side])
+                ax.set_xticks(range(len(pairs)))
+                ax.set_xticklabels([a+' / '+b for a,b in pairs], rotation=20)
+                ax.set_ylim(0, 1); ax.set_ylabel('Final-test |Pearson r|')
+                ax.set_title(method); ax.legend()
+            fig.suptitle(title); fig.tight_layout(rect=(0, 0, 1, .94))
+            fig.savefig(str(figures/(filename+'.png')), dpi=150); plt.close(fig)
     fig, axes = plt.subplots(2,1,figsize=(13,7))
     # Label-free variances; different method score scales are intentionally separate.
     rows = read_csv(output/'fit_metrics.csv')
@@ -496,7 +518,7 @@ def make_figures(output, metadata, factors, metrics, z, labels):
 
 def make_report(output, metadata, metrics, comparisons, cleanup_rows):
     details = {(r['condition'],r['method']):r for r in metadata['extractors']}
-    lines = ['# 教師なし潜在因子抽出：既存線形データ', '',
+    lines = ['# 教師なし潜在因子抽出', '',
              'NNは再学習せず、既存の学習済みモデル・隠れ層を検証して再利用した。'
              '抽出器・標準化・定数列判定・X再構成係数は学習{}件だけでfitした。'
              '検証{}件・最終テスト{}件にはtransformのみを適用した。'.format(
@@ -545,7 +567,7 @@ def make_report(output, metadata, metrics, comparisons, cleanup_rows):
               '- 真のZとの対応は抽出後の人工データ評価であり、高相関でも因果的同定や潜在変数の自動検出の証明ではない。',
               '- 元のXや未学習NNも共通変動を保持する。GraN-DAGの利点は同一マスクの対照と元のXの両方と比較して判断する。',
               '- 因子数1は既知の実験設計として事前固定した。因子が存在するか／何個かを自動判定したわけではない。',
-              '- 一つの線形データ・NNシードで、既に過去の研究で閲覧されたテストを再利用している。探索的結果であり一般的優位性は断定しない。',
+              '- 一つのデータ条件・NNシードによる探索的結果であり一般的優位性は断定しない。既存テストを再利用した場合は独立した確認実験とも区別する。',
               '- 次はZを使わない平行分析・検証再構成／尤度による因子数選択、ブートストラップ安定性・多シード、無潜在因子対照、非線形／複数因子条件を検討する（今回未実装）。',
               '- MLP内の重複ユニットはFAの独立残差仮定を満たさない場合がある。MLP間の共通変動を分離する多視点因子モデル等も今後の候補。',
               '- 因果的共通原因の同定には、追加の生成仮定や独立性検証、必要に応じて介入等の別の根拠が必要。', '',

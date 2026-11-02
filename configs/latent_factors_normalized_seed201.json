@@ -1,0 +1,15 @@
+{
+  "run_dir": "experiments/latent_nonlinear_normalized_seed201",
+  "output_dir": "experiments/latent_nonlinear_normalized_seed201/unsupervised_factors",
+  "seed": 201,
+  "n_factors": 1,
+  "condition_codes": ["C", "E", "B", "D"],
+  "pca": {"svd_solver": "full"},
+  "factor_analysis": {"svd_method": "lapack", "max_iter": 5000, "tol": 0.0001},
+  "kernel_pca": {
+    "kernel": "rbf",
+    "gamma_rule": "1 / (2 * median(positive squared pairwise distances of train-standardized X))",
+    "eigen_solver": "dense"
+  },
+  "selection_policy": "all 18 conditions fixed before Z; no parameter tuning; first component/factor only"
+}

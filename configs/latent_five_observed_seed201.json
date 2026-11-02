@@ -1,0 +1,26 @@
+{
+  "extends": "latent_nonlinear_normalized_seed201.json",
+  "name": "latent_five_observed_seed201",
+  "output_dir": "experiments/latent_five_observed_seed201",
+  "data": {
+    "n_samples": 1000,
+    "n_observed": 5,
+    "n_latent": 1,
+    "seed": 201,
+    "latent_coefficients": [[1, 1, 1, 1, 1]],
+    "observed_coefficients": [[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]],
+    "noise_std": 1,
+    "latent_functions": ["tanh", "sin", "cubic", "tanh2", "sin2"],
+    "signal_normalization": {"fit_split": "train", "ddof": 0}
+  },
+  "analysis": {
+    "seed": 201,
+    "n_factors": 1,
+    "conditions": ["A", "B", "C", "D", "E"],
+    "hidden_layer": 1,
+    "hidden_stage": "train",
+    "pca": {"svd_solver": "full"},
+    "factor_analysis": {"svd_method": "lapack", "max_iter": 5000, "tol": 0.0001},
+    "selection_policy": "all five conditions fixed before Z; no tuning or sign alignment"
+  }
+}

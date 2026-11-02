@@ -56,7 +56,7 @@ def observed_coefficients(config):
     return matrix
 
 
-def generate_arrays(config):
+def generate_arrays(config, signal_fit_indices=None):
     n, d, k = [int(config[key]) for key in ('n_samples', 'n_observed', 'n_latent')]
     if min(n, d, k) <= 0:
         raise ValueError('Sample/observed/latent counts must be positive')
@@ -83,11 +83,39 @@ def generate_arrays(config):
     try:
         latent_function = FUNCTIONS[config.get('latent_function', 'identity')]
         observed_function = FUNCTIONS[config.get('observed_function', 'identity')]
+        # Optional target-specific transformations; absent means the original
+        # shared transformation and RNG sequence remain exactly unchanged.
+        names = config.get('latent_functions')
+        if names is not None and (not isinstance(names, list) or len(names) != d):
+            raise ValueError('latent_functions must list one function per observed variable')
+        target_functions = [FUNCTIONS[name] for name in names] if names is not None else None
     except KeyError as error:
         raise ValueError('Unknown generation function: {}'.format(error))
     noise = rng.normal(size=(n, d)) * std
     x = np.zeros((n, d))
-    latent_effect = latent_function(z) @ latent
+    if target_functions is None:
+        latent_effect = latent_function(z) @ latent
+    else:
+        latent_effect = np.column_stack([
+            function(z) @ latent[:, target]
+            for target, function in enumerate(target_functions)])
+    signal_arrays = {}
+    normalization = config.get('signal_normalization')
+    if normalization is not None:
+        if normalization != {'fit_split': 'train', 'ddof': 0} or signal_fit_indices is None:
+            raise ValueError('Signal normalization requires explicit training IDs and fit_split=train, ddof=0')
+        indices = np.asarray(signal_fit_indices)
+        if (indices.ndim != 1 or indices.dtype.kind not in 'iu' or len(indices) < 2 or
+                len(np.unique(indices)) != len(indices) or (indices < 0).any() or (indices >= n).any()):
+            raise ValueError('Invalid signal-normalization training IDs')
+        raw_signal = latent_effect.copy()
+        signal_mean = raw_signal[indices].mean(0)
+        signal_std = raw_signal[indices].std(0, ddof=0)
+        if not np.isfinite(signal_std).all() or (signal_std <= 0).any():
+            raise ValueError('Signal training standard deviations must be positive and finite')
+        latent_effect = (raw_signal-signal_mean)/signal_std
+        signal_arrays = dict(raw_signal=raw_signal, normalized_signal=latent_effect.copy(),
+                             signal_mean=signal_mean, signal_std=signal_std)
     for target in topological_order(observed):
         parents = np.flatnonzero(observed[:, target])
         x[:, target] = latent_effect[:, target] + noise[:, target]
@@ -95,11 +123,13 @@ def generate_arrays(config):
             x[:, target] += observed_function(x[:, parents]) @ observed[parents, target]
     if not np.isfinite(x).all() or not np.isfinite(z).all():
         raise ValueError('Nonfinite generated data; adjust SEM coefficients/functions')
-    return {'observed_X': x, 'true_Z': z, 'noise': noise,
+    result = {'observed_X': x, 'true_Z': z, 'noise': noise,
             'observed_adjacency': (observed != 0).astype(np.int64),
             'latent_adjacency': (latent != 0).astype(np.int64),
             'observed_coefficients': observed, 'latent_coefficients': latent,
             'sample_indices': np.arange(n, dtype=np.int64)}
+    result.update(signal_arrays)
+    return result
 
 
 def split_indices(n, split_config, training_seed):
@@ -126,8 +156,8 @@ def split_indices(n, split_config, training_seed):
 def save_dataset(config, directory):
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=False)
-    arrays = generate_arrays(config['data'])
-    splits = split_indices(len(arrays['observed_X']), config['split'], config['training']['seed'])
+    splits = split_indices(int(config['data']['n_samples']), config['split'], config['training']['seed'])
+    arrays = generate_arrays(config['data'], signal_fit_indices=splits['train'])
     for name, array in arrays.items():
         np.save(str(directory / (name+'.npy')), array)
     np.save(str(directory / 'sample_split.npy'), splits['labels'])
@@ -137,6 +167,15 @@ def save_dataset(config, directory):
     data_config['resolved_observed_coefficients'] = arrays['observed_coefficients'].tolist()
     data_config['adjacency_convention'] = 'source row -> target column; latent adjacency shape=(K,D)'
     data_config['equation'] = 'Xi=sum_k A[k,i]*f(Zk)+sum_j B[j,i]*g(Xj)+epsilon_i'
+    if config['data'].get('latent_functions') is not None:
+        data_config['equation'] = 'Xi=sum_k A[k,i]*f_i(Zk)+sum_j B[j,i]*g(Xj)+epsilon_i; f_i=latent_functions[i]'
+    if config['data'].get('signal_normalization') is not None:
+        data_config['equation'] = 'Xi=(sum_k A[k,i]*f_i(Zk)-signal_mean[i])/signal_std[i]+sum_j B[j,i]*g(Xj)+epsilon_i'
+        data_config['resolved_signal_normalization'] = dict(
+            mean=arrays['signal_mean'].tolist(), std=arrays['signal_std'].tolist(),
+            scale=(1/arrays['signal_std']).tolist(), offset=(-arrays['signal_mean']/arrays['signal_std']).tolist(),
+            fit_split='train', n_fit=len(splits['train']), ddof=0,
+            fit_indices_file='train_indices.npy', Z_used_only_for_data_generation=True)
     data_config['causal_warning'] = 'Observed direct DAG omits unobserved common causes and is not the full marginal causal graph.'
     (directory / 'config.json').write_text(json.dumps(data_config, indent=2), encoding='utf-8')
     pool_dir = directory.parent / 'training_input'

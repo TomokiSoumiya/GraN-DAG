@@ -1,0 +1,13 @@
+{
+  "source_run": "experiments/latent_nonlinear_normalized_seed201",
+  "oracle_run": "experiments/latent_oracle_normalized_seed201",
+  "output_dir": "experiments/latent_zhat_normalized_seed201",
+  "seed": 201,
+  "noise_std": 1,
+  "variable_order": ["Z_hat", "X1", "X2", "X3"],
+  "source_condition": "C_L1_pca",
+  "expected_test_absolute_correlation": 0.825139,
+  "reported_rounding_tolerance": 0.0000005,
+  "selection_policy": "fixed user-specified saved factor; no refit, sign alignment or condition search",
+  "interpretation": "exploratory graph diagnosis, not causal latent identification"
+}

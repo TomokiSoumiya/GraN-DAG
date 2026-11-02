@@ -1,0 +1,17 @@
+{
+  "source_dir": "experiments/latent_nonlinear_normalized_seed201",
+  "output_dir": "experiments/latent_feature_controls_seed201",
+  "seed": 201,
+  "linear_feature_seed": 201,
+  "linear_coefficients": "RandomState(201).normal(size=(3,10)); zero intercept; no reroll",
+  "n_factors": 1,
+  "pca": {"svd_solver": "full"},
+  "conditions": ["A", "B", "C", "D", "E"],
+  "reused_keys": {"A": "X_pca", "B": "B_L1_pca", "C": "C_L1_pca"},
+  "hidden_stage": "train",
+  "hidden_layer": 1,
+  "variance_ddof": 1,
+  "high_absolute_correlation_threshold": 0.95,
+  "rank_relative_tolerance": 1e-10,
+  "selection_policy": "all five conditions fixed; no Z-based sign, feature, component or condition selection"
+}

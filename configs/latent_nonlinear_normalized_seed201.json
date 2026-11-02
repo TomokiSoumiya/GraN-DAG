@@ -1,0 +1,20 @@
+{
+  "extends": "latent_linear.json",
+  "name": "latent_nonlinear_normalized_seed201",
+  "output_dir": "experiments/latent_nonlinear_normalized_seed201",
+  "data": {
+    "n_samples": 1000,
+    "n_observed": 3,
+    "n_latent": 1,
+    "seed": 201,
+    "latent_distribution": {"type": "normal", "mean": 0.0, "std": 1.0},
+    "latent_coefficients": [[1.0, 1.0, 1.0]],
+    "observed_coefficients": [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+    "noise_std": 1.0,
+    "latent_function": "identity",
+    "latent_functions": ["tanh", "sin", "cubic"],
+    "signal_normalization": {"fit_split": "train", "ddof": 0}
+  },
+  "split": {"train": 0.6, "validation": 0.2, "test": 0.2, "seed": 201},
+  "training": {"seed": 201}
+}

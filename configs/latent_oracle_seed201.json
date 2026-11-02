@@ -1,0 +1,10 @@
+{
+  "source_run": "experiments/latent_nonlinear_normalized_seed201",
+  "output_dir": "experiments/latent_oracle_normalized_seed201",
+  "seed": 201,
+  "noise_std": 1,
+  "variable_order": ["Z", "X1", "X2", "X3"],
+  "training_policy": "reuse source training settings unchanged; one new NN fit; no fixed Z directions",
+  "graph_truth_policy": "evaluation only; original loader receives an all-zero logging placeholder, not truth",
+  "shd_policy": "directed reversal costs one: FN + FP - reversals"
+}
